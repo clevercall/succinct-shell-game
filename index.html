@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Shell Game – Find the Egg!</title>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: url('background.png') no-repeat center center fixed;
+      background-size: cover;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    .game-container {
+      text-align: center;
+      background: rgba(255, 255, 255, 0.2);
+      padding: 20px;
+      border-radius: 10px;
+    }
+
+    h1 {
+      margin-bottom: 20px;
+      color: white;
+    }
+
+    .cups {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+
+    .cup {
+      width: 60px;
+      height: 60px;
+      background: linear-gradient(to bottom, #c49e57, #8b6a3e);
+      border-radius: 0 0 30px 30px;
+      border: 2px solid #5a3c1f;
+      cursor: pointer;
+      box-shadow: inset 0 10px 10px rgba(255,255,255,0.2);
+      transition: transform 0.5s ease;
+    }
+
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    #result {
+      margin-top: 20px;
+      font-size: 18px;
+      font-weight: bold;
+      color: white;
+    }
+
+    .egg {
+      position: absolute;
+      width: 40px;
+      height: 55px;
+      background: radial-gradient(ellipse at center, #ffffff 0%, #e0e0e0 100%);
+      border-radius: 50% 50% 45% 45%;
+      border: 1px solid #ccc;
+      transition: top 0.5s ease, visibility 0.3s;
+      z-index: 10;
+      visibility: visible;
+    }
+
+    @media(max-width: 600px) {
+      .cups {
+        gap: 10px;
+      }
+
+      .cup {
+        width: 50px;
+        height: 50px;
+      }
+
+      button {
+        width: 80%;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="game-container">
+    <h1>Find the Egg!</h1>
+    <div class="cups">
+      <div class="cup" id="cup1"></div>
+      <div class="cup" id="cup2"></div>
+      <div class="cup" id="cup3"></div>
+    </div>
+    <button id="shuffleBtn">Shuffle</button>
+    <p id="result"></p>
+  </div>
+
+  <!-- Background Music -->
+  <audio id="bgMusic" src="bg-music.mp3" loop></audio>
+
+  <script>
+    let eggPosition = null;
+    let isShuffling = false;
+
+    function shuffle() {
+      if (isShuffling) return;
+      
+      // Play background music on first user interaction
+      const music = document.getElementById('bgMusic');
+      if (music.paused) {
+        music.play();
+        music.volume = 0.5;
+      }
+
+      isShuffling = true;
+
+      const resultEl = document.getElementById('result');
+      resultEl.textContent = "Placing egg...";
+
+      const cups = document.querySelectorAll('.cup');
+
+      // Remove existing egg visuals
+      const existingEgg = document.getElementById('egg');
+      if (existingEgg) existingEgg.remove();
+
+      // Randomly choose egg position
+      eggPosition = Math.floor(Math.random() * 3) + 1;
+      console.log("Egg is under cup", eggPosition);
+
+      // Place egg animation first
+      placeEggAnimation(eggPosition, () => {
+        // After egg placement, start shuffle
+        resultEl.textContent = "Shuffling...";
+        startRealShuffle(cups, resultEl);
+      });
+    }
+
+    function placeEggAnimation(cupNumber, callback) {
+      const cup = document.getElementById(`cup${cupNumber}`);
+      const egg = document.createElement('div');
+      egg.id = "egg";
+      egg.className = "egg";
+      document.body.appendChild(egg);
+
+      const cupRect = cup.getBoundingClientRect();
+      egg.style.left = `${cupRect.left + cupRect.width/2 - 20}px`;
+      egg.style.top = `${cupRect.top - 30}px`;
+
+      // Animate egg down into cup
+      setTimeout(() => {
+        egg.style.top = `${cupRect.top + cupRect.height/2 - 27}px`;
+      }, 100);
+
+      // After animation ends, proceed to shuffle
+      setTimeout(() => {
+        egg.style.visibility = "hidden"; // hide egg before shuffling
+        callback();
+      }, 700);
+    }
+
+    function startRealShuffle(cups, resultEl) {
+      let shuffleCount = 0;
+      const maxShuffles = 5;
+
+      const shuffleInterval = setInterval(() => {
+        const i = Math.floor(Math.random() * cups.length);
+        let j = Math.floor(Math.random() * cups.length);
+        while (i === j) {
+          j = Math.floor(Math.random() * cups.length);
+        }
+
+        const cup1 = cups[i];
+        const cup2 = cups[j];
+
+        const cup1Rect = cup1.getBoundingClientRect();
+        const cup2Rect = cup2.getBoundingClientRect();
+        const dx = cup2Rect.left - cup1Rect.left;
+
+        cup1.style.transition = "transform 0.5s ease";
+        cup2.style.transition = "transform 0.5s ease";
+
+        cup1.style.transform = `translateX(${dx}px)`;
+        cup2.style.transform = `translateX(${-dx}px)`;
+
+        setTimeout(() => {
+          cup1.style.transition = "";
+          cup2.style.transition = "";
+          cup1.style.transform = "";
+          cup2.style.transform = "";
+
+          const parent = cup1.parentNode;
+          if (cup1.nextSibling === cup2) {
+            parent.insertBefore(cup2, cup1);
+          } else {
+            parent.insertBefore(cup1, cup2);
+          }
+
+          shuffleCount++;
+          if (shuffleCount >= maxShuffles) {
+            clearInterval(shuffleInterval);
+            resultEl.textContent = "Shuffling done. Pick a cup!";
+            isShuffling = false;
+          }
+        }, 600);
+
+      }, 700);
+    }
+
+    function checkCup(selectedCup) {
+      if (eggPosition === null) {
+        document.getElementById('result').textContent = "Please shuffle first!";
+        return;
+      }
+
+      const egg = document.getElementById('egg');
+      const correctCupEl = document.getElementById(`cup${eggPosition}`);
+      const cupRect = correctCupEl.getBoundingClientRect();
+
+      // Reveal egg under correct cup
+      egg.style.left = `${cupRect.left + cupRect.width/2 - 20}px`;
+      egg.style.top = `${cupRect.top + cupRect.height/2 - 27}px`;
+      egg.style.visibility = "visible";
+
+      if (selectedCup === eggPosition) {
+        document.getElementById('result').textContent = "🎉 You found the egg! You win!";
+      } else {
+        document.getElementById('result').textContent = "❌ Wrong cup. The egg was here.";
+      }
+    }
+
+    document.getElementById('shuffleBtn').addEventListener('click', shuffle);
+    document.getElementById('cup1').addEventListener('click', () => checkCup(1));
+    document.getElementById('cup2').addEventListener('click', () => checkCup(2));
+    document.getElementById('cup3').addEventListener('click', () => checkCup(3));
+  </script>
+</body>
+</html>
