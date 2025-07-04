@@ -1,0 +1,1 @@
+# succinct-shell-game
