@@ -213,6 +213,10 @@
     }
 
     function checkCup(selectedCup) {
+      if (isShuffling) {
+            document.getElementById('result').textContent = "Shuffling...";
+            return;
+      }
       if (eggPosition === null) {
         document.getElementById('result').textContent = "Please shuffle first!";
         return;
